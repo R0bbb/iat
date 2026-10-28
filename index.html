@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}</style>
+<title>IAT su misura</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: strumento da laboratorio, una colonna centrata. Setup -> istruzioni -> prova a schermo intero -> risultato con scala D. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --fg: #14181f;
+  --muted: #5a6372;
+  --line: #d5dae3;
+  --tc: #1f5fd6;   /* stimoli e categorie target */
+  --ac: #0b7d58;   /* stimoli e categorie attributo */
+  --err: #d12b2b;
+  --accent: #1f5fd6;
+  --accent-fg: #ffffff;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f131a; --surface: #171c25; --fg: #e8ecf3; --muted: #98a2b3; --line: #2a3140;
+    --tc: #7aa8ff; --ac: #4cc79a; --err: #ff6b6b; --accent: #7aa8ff; --accent-fg: #0b1220;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f131a; --surface: #171c25; --fg: #e8ecf3; --muted: #98a2b3; --line: #2a3140;
+  --tc: #7aa8ff; --ac: #4cc79a; --err: #ff6b6b; --accent: #7aa8ff; --accent-fg: #0b1220;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-block: 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 860px; margin: 0 auto; }
+h1 { font-size: 1.55rem; line-height: 1.2; margin: 0 0 6px; font-weight: 600; text-wrap: balance; }
+h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 600; text-wrap: balance; }
+p { margin: 0 0 12px; max-width: 65ch; }
+.lead { color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.t { color: var(--tc); }
+.a { color: var(--ac); }
+
+/* setup */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+@media (max-width: 640px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.cat { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cat .tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+label { font-size: 13px; color: var(--muted); }
+input[type=text], textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px;
+}
+textarea { min-height: 96px; resize: vertical; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.chk { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 14px; }
+button.primary {
+  background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 4px;
+  font: inherit; font-weight: 600; padding: 10px 18px; cursor: pointer;
+}
+button.ghost {
+  background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 4px;
+  font: inherit; padding: 9px 14px; cursor: pointer;
+}
+.err-msg { color: var(--err); font-size: 13px; min-height: 1.4em; margin: 6px 0 0; }
+.notes { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 14px; color: var(--muted); font-size: 13px; }
+.notes p { max-width: 75ch; }
+
+/* istruzioni */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; }
+.rule { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 14px 0; align-items: baseline; }
+kbd { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 7px; background: var(--bg); }
+.progress { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
+
+/* prova */
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  min-height: 112px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; text-align: center; font: inherit; color: var(--fg); cursor: pointer; position: relative; overflow-wrap: anywhere;
+}
+.panel .key { position: absolute; top: 8px; left: 10px; }
+.panel .lab { font-weight: 600; font-size: 1.1rem; line-height: 1.25; }
+.panel .or { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.stage { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.stim { font-size: clamp(2rem, 8vw, 3.2rem); font-weight: 600; text-align: center; overflow-wrap: anywhere; min-height: 1.3em; }
+.stim.T { color: var(--tc); }
+.stim.A { color: var(--ac); }
+.xmark { color: var(--err); font-family: var(--font-mono); font-size: 3rem; font-weight: 500; line-height: 1; }
+.hint { text-align: center; color: var(--muted); font-size: 13px; }
+
+/* risultato */
+.dnum { font-family: var(--font-mono); font-size: 3.2rem; font-weight: 500; line-height: 1; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.scale { position: relative; height: 10px; background: var(--line); border-radius: 5px; margin: 26px 8px 8px; }
+.scale .mid { position: absolute; left: 50%; top: -5px; width: 2px; height: 20px; background: var(--muted); }
+.scale .dot { position: absolute; top: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); transform: translateX(-50%); }
+.scale-lab { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.scale-lab span { max-width: 45%; }
+.scale-lab span:last-child { text-align: right; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+@media (max-width: 560px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.stat { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--surface); }
+.stat b { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.warn { border: 1px solid var(--err); color: var(--err); border-radius: 6px; padding: 10px 12px; margin: 12px 0; }
+textarea.csv { font-family: var(--font-mono); font-size: 12px; min-height: 120px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<main>
+  <!-- SETUP -->
+  <section id="setup">
+    <h1>IAT su misura</h1>
+    <p class="lead">Scegli due categorie da confrontare e due categorie di attributi, poi scrivi le parole che le rappresentano. Il test misura quanto sei più rapido quando due concetti condividono lo stesso tasto. L'esempio sotto è già compilato.</p>
+    <div class="grid">
+      <div class="cat"><span class="tag t">Categoria A (target)</span>
+        <label for="nA">Nome</label><input type="text" id="nA" maxlength="30">
+        <label for="iA">Parole, separate da virgola o a capo (almeno 4)</label><textarea id="iA"></textarea></div>
+      <div class="cat"><span class="tag t">Categoria B (target)</span>
+        <label for="nB">Nome</label><input type="text" id="nB" maxlength="30">
+        <label for="iB">Parole</label><textarea id="iB"></textarea></div>
+      <div class="cat"><span class="tag a">Attributo 1</span>
+        <label for="nX">Nome</label><input type="text" id="nX" maxlength="30">
+        <label for="iX">Parole</label><textarea id="iX"></textarea></div>
+      <div class="cat"><span class="tag a">Attributo 2 (opposto)</span>
+        <label for="nY">Nome</label><input type="text" id="nY" maxlength="30">
+        <label for="iY">Parole</label><textarea id="iY"></textarea></div>
+    </div>
+    <div class="row">
+      <button class="primary" id="go" type="button">Inizia il test</button>
+      <label class="chk"><input type="checkbox" id="swap"> Inizia con B a sinistra</label>
+      <button class="ghost" id="reset" type="button">Ripristina esempio</button>
+    </div>
+    <p class="err-msg" id="setupErr" role="alert"></p>
+    <div class="notes">
+      <p>Durata: circa 5 minuti, in 7 blocchi (180 risposte). Usa una tastiera fisica se puoi: <kbd>E</kbd> per il lato sinistro, <kbd>I</kbd> per il destro. Su telefono tocca i due riquadri in alto.</p>
+      <p>Il punteggio è calcolato con l'algoritmo D di Greenwald, Nosek e Banaji (2003). Un test costruito da te serve a esplorare e a insegnare il metodo: non ha norme di riferimento né valore diagnostico. I dati restano nel tuo browser.</p>
+    </div>
+  </section>
+
+  <!-- ISTRUZIONI -->
+  <section id="instr" hidden>
+    <div class="card">
+      <div class="progress" id="iProg"></div>
+      <h2 id="iTitle"></h2>
+      <p id="iText"></p>
+      <div class="rule" id="iRule"></div>
+      <p class="lead">Rispondi il più in fretta possibile, senza sbagliare. Se sbagli compare una <span style="color:var(--err)">X</span>: premi l'altro tasto per correggere.</p>
+      <button class="primary" id="iGo" type="button">Inizia il blocco (Spazio)</button>
+    </div>
+  </section>
+
+  <!-- PROVA -->
+  <section id="trial" hidden>
+    <div class="progress" id="tProg"></div>
+    <div class="panels">
+      <button type="button" class="panel" id="pL" aria-label="Lato sinistro"><kbd class="key">E</kbd><span class="lab-wrap" id="lL"></span></button>
+      <button type="button" class="panel" id="pR" aria-label="Lato destro"><kbd class="key">I</kbd><span class="lab-wrap" id="lR"></span></button>
+    </div>
+    <div class="stage" aria-live="off">
+      <div class="stim" id="stim"></div>
+      <div class="xmark" id="xm" hidden>X</div>
+    </div>
+    <p class="hint">E = sinistra · I = destra. Su telefono tocca il riquadro corretto.</p>
+  </section>
+
+  <!-- RISULTATO -->
+  <section id="result" hidden>
+    <h1>Risultato</h1>
+    <div class="card">
+      <div class="progress">Punteggio D</div>
+      <div class="dnum" id="dnum"></div>
+      <p id="dtext"></p>
+      <div class="scale" id="scale"><div class="mid"></div><div class="dot" id="dot"></div></div>
+      <div class="scale-lab"><span id="sL"></span><span id="sR"></span></div>
+    </div>
+    <div class="warn" id="warn" hidden></div>
+    <div class="stats" id="stats"></div>
+    <p class="lead">Soglie usate di solito per |D|: sotto 0,15 nessuna associazione, da 0,15 leggera, da 0,35 moderata, da 0,65 forte. Con categorie inventate da te, prendile solo come ordine di grandezza.</p>
+    <div class="row">
+      <button class="primary" id="again" type="button">Nuovo test</button>
+      <button class="ghost" id="copy" type="button">Copia dati (CSV)</button>
+    </div>
+    <p class="err-msg" id="copyMsg" role="status"></p>
+    <label for="csv">Dati di ogni risposta</label>
+    <textarea class="csv" id="csv" readonly></textarea>
+  </section>
+</main>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var DEF = {
+    A: ['Fiori', 'rosa, tulipano, margherita, orchidea, giglio, viola, girasole, papavero'],
+    B: ['Insetti', 'ragno, zanzara, vespa, scarafaggio, mosca, formica, cavalletta, zecca'],
+    X: ['Piacevole', 'gioia, amore, pace, sorriso, felicità, festa, abbraccio, luce'],
+    Y: ['Spiacevole', 'dolore, odio, guerra, rabbia, disastro, lutto, veleno, incubo']
+  };
+  var IDS = { A: ['nA', 'iA'], B: ['nB', 'iB'], X: ['nX', 'iX'], Y: ['nY', 'iY'] };
+  var TYPE = { A: 'T', B: 'T', X: 'A', Y: 'A' };
+
+  function fill() {
+    for (var k in IDS) { $('#' + IDS[k][0]).value = DEF[k][0]; $('#' + IDS[k][1]).value = DEF[k][1]; }
+    $('#swap').checked = false;
+  }
+  fill();
+
+  function show(id) {
+    ['setup', 'instr', 'trial', 'result'].forEach(function (s) { $('#' + s).hidden = (s !== id); });
+    window.scrollTo(0, 0);
+  }
+
+  function parse(txt) {
+    return txt.split(/[,\n;]/).map(function (s) { return s.trim(); }).filter(Boolean)
+      .filter(function (s, i, a) { return a.indexOf(s) === i; });
+  }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  var cats, blocks, bi, trials, ti, cur, t0, mode = 'idle', all = [], cfgNames;
+
+  function readSetup() {
+    var out = {}, names = [];
+    for (var k in IDS) {
+      var name = $('#' + IDS[k][0]).value.trim();
+      var items = parse($('#' + IDS[k][1]).value);
+      if (!name) return { error: 'Dai un nome a ogni categoria.' };
+      if (items.length < 4) return { error: 'La categoria «' + name + '» ha bisogno di almeno 4 parole diverse.' };
+      if (names.indexOf(name.toLowerCase()) >= 0) return { error: 'I nomi delle categorie devono essere diversi tra loro.' };
+      names.push(name.toLowerCase());
+      out[k] = { key: k, name: name, items: items, type: TYPE[k] };
+    }
+    return { cats: out };
+  }
+
+  function buildBlocks(c, swap) {
+    var A = swap ? c.B : c.A, B = swap ? c.A : c.B, X = c.X, Y = c.Y;
+    function b(n, count, left, right, title, text) { return { n: n, count: count, left: left, right: right, title: title, text: text }; }
+    return [
+      b(1, 20, [A], [B], 'Prova: categorie', 'Smista le parole nella categoria giusta.'),
+      b(2, 20, [X], [Y], 'Prova: attributi', 'Smista le parole nella categoria giusta.'),
+      b(3, 20, [A, X], [B, Y], 'Prova combinata', 'Ora le categorie sono abbinate: ogni tasto vale per due categorie.'),
+      b(4, 40, [A, X], [B, Y], 'Test combinato', 'Stesso abbinamento, questa volta i tempi contano per il punteggio.'),
+      b(5, 40, [B], [A], 'Prova: categorie invertite', 'Attenzione: le due categorie hanno cambiato lato. Rileggi bene dove sono.'),
+      b(6, 20, [B, X], [A, Y], 'Prova combinata invertita', 'Nuovo abbinamento: le categorie target sono scambiate rispetto a prima.'),
+      b(7, 40, [B, X], [A, Y], 'Test combinato invertito', 'Stesso abbinamento invertito, i tempi contano per il punteggio.')
+    ];
+  }
+
+  function makeTrials(blk) {
+    var sets = blk.left.concat(blk.right);
+    var tg = sets.filter(function (s) { return s.type === 'T'; });
+    var at = sets.filter(function (s) { return s.type === 'A'; });
+    var bags = {};
+    function pick(c, last) {
+      var bag = bags[c.key];
+      if (!bag || !bag.length) { bag = bags[c.key] = shuffle(c.items); if (bag[bag.length - 1] === last && bag.length > 1) bag.unshift(bag.pop()); }
+      return bag.pop();
+    }
+    function sideOf(c) { return blk.left.indexOf(c) >= 0 ? 'L' : 'R'; }
+    var seq = [];
+    if (tg.length && at.length) {
+      var nT = blk.count / 2, nA = blk.count / 2;
+      var tc = [], ac = [], i;
+      for (i = 0; i < nT; i++) tc.push(tg[i % 2]);
+      for (i = 0; i < nA; i++) ac.push(at[i % 2]);
+      tc = shuffle(tc); ac = shuffle(ac);
+      var startT = Math.random() < 0.5;
+      for (i = 0; i < blk.count; i++) {
+        var useT = (i % 2 === 0) === startT;
+        seq.push(useT ? tc.pop() : ac.pop());
+      }
+    } else {
+      var pool = tg.length ? tg : at, cl = [];
+      for (var j = 0; j < blk.count; j++) cl.push(pool[j % 2]);
+      seq = shuffle(cl);
+    }
+    var last = null;
+    return seq.map(function (c) {
+      var s = pick(c, last); last = s;
+      return { block: blk.n, cat: c.name, kind: c.type, stim: s, side: sideOf(c), rt: null, err: false };
+    });
+  }
+
+  function labelHTML(list) {
+    return list.map(function (c, i) {
+      var s = '<span class="lab ' + (c.type === 'T' ? 't' : 'a') + '"></span>';
+      return (i ? '<span class="or">oppure</span>' : '') + s;
+    }).join('');
+  }
+  function setLabels(el, list) {
+    el.innerHTML = labelHTML(list);
+    var spans = el.querySelectorAll('.lab');
+    list.forEach(function (c, i) { spans[i].textContent = c.name; });
+    el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.alignItems = 'center'; el.style.gap = '2px';
+  }
+
+  function startTest() {
+    var r = readSetup();
+    if (r.error) { $('#setupErr').textContent = r.error; return; }
+    $('#setupErr').textContent = '';
+    cats = r.cats;
+    blocks = buildBlocks(cats, $('#swap').checked);
+    all = []; bi = -1;
+    nextBlock();
+  }
+
+  function nextBlock() {
+    bi++;
+    if (bi >= blocks.length) return finish();
+    var blk = blocks[bi];
+    $('#iProg').textContent = 'Blocco ' + blk.n + ' di 7';
+    $('#iTitle').textContent = blk.title;
+    $('#iText').textContent = blk.text;
+    var rule = $('#iRule'); rule.innerHTML = '';
+    [['E', 'Sinistra', blk.left], ['I', 'Destra', blk.right]].forEach(function (x) {
+      var k = document.createElement('div'); k.innerHTML = '<kbd></kbd>'; k.firstChild.textContent = x[0];
+      var v = document.createElement('div');
+      x[2].forEach(function (c, i) {
+        if (i) v.appendChild(document.createTextNode(' oppure '));
+        var s = document.createElement('b'); s.className = c.type === 'T' ? 't' : 'a'; s.textContent = c.name; v.appendChild(s);
+      });
+      rule.appendChild(k); rule.appendChild(v);
+    });
+    mode = 'instr';
+    show('instr');
+    $('#iGo').focus({ preventScroll: true });
+  }
+
+  function startBlock() {
+    var blk = blocks[bi];
+    trials = makeTrials(blk); ti = 0;
+    $('#tProg').textContent = 'Blocco ' + blk.n + ' di 7 · ' + blk.title;
+    setLabels($('#lL'), blk.left); setLabels($('#lR'), blk.right);
+    show('trial');
+    mode = 'iti'; $('#stim').textContent = '';
+    setTimeout(nextTrial, 600);
+  }
+
+  function nextTrial() {
+    if (ti >= trials.length) { all = all.concat(trials); return nextBlock(); }
+    cur = trials[ti];
+    var s = $('#stim'); s.textContent = cur.stim; s.className = 'stim ' + cur.kind;
+    $('#xm').hidden = true;
+    t0 = performance.now(); mode = 'trial';
+  }
+
+  function respond(side) {
+    if (mode !== 'trial') return;
+    if (side === cur.side) {
+      cur.rt = performance.now() - t0; mode = 'iti';
+      $('#stim').textContent = ''; $('#xm').hidden = true;
+      setTimeout(function () { ti++; nextTrial(); }, 250);
+    } else {
+      cur.err = true; $('#xm').hidden = false;
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var k = e.key;
+    if (mode === 'trial') {
+      if (k === 'e' || k === 'E') { e.preventDefault(); respond('L'); }
+      else if (k === 'i' || k === 'I') { e.preventDefault(); respond('R'); }
+    } else if (mode === 'instr' && (k === ' ' || k === 'Enter')) {
+      e.preventDefault(); mode = 'wait'; startBlock();
+    }
+  });
+  $('#pL').addEventListener('pointerdown', function (e) { e.preventDefault(); respond('L'); });
+  $('#pR').addEventListener('pointerdown', function (e) { e.preventDefault(); respond('R'); });
+  $('#iGo').addEventListener('click', function () { if (mode === 'instr') { mode = 'wait'; startBlock(); } });
+  $('#go').addEventListener('click', startTest);
+  $('#reset').addEventListener('click', fill);
+  $('#again').addEventListener('click', function () { mode = 'idle'; show('setup'); });
+
+  /* --- punteggio D (Greenwald, Nosek, Banaji 2003) --- */
+  function mean(a) { return a.reduce(function (s, x) { return s + x; }, 0) / a.length; }
+  function sd(a) { var m = mean(a); return Math.sqrt(a.reduce(function (s, x) { return s + (x - m) * (x - m); }, 0) / (a.length - 1)); }
+  function fmt(n, d) { return n.toFixed(d).replace('.', ','); }
+
+  function score(data) {
+    function blk(n) { return data.filter(function (t) { return t.block === n && t.rt <= 10000; }); }
+    function prep(n) {
+      var b = blk(n), ok = b.filter(function (t) { return !t.err; }).map(function (t) { return t.rt; });
+      var m = mean(ok);
+      return b.map(function (t) { return t.err ? m + 600 : t.rt; });
+    }
+    var comb = data.filter(function (t) { return [3, 4, 6, 7].indexOf(t.block) >= 0; });
+    var fast = comb.filter(function (t) { return t.rt < 300; }).length / comb.length;
+    var p3 = prep(3), p4 = prep(4), p6 = prep(6), p7 = prep(7);
+    var d1 = (mean(p6) - mean(p3)) / sd(p3.concat(p6));
+    var d2 = (mean(p7) - mean(p4)) / sd(p4.concat(p7));
+    return { d: (d1 + d2) / 2, fast: fast };
+  }
+
+  function pairStats(data, nums) {
+    var b = data.filter(function (t) { return nums.indexOf(t.block) >= 0; });
+    var ok = b.filter(function (t) { return !t.err; }).map(function (t) { return t.rt; });
+    return { rt: mean(ok), err: b.filter(function (t) { return t.err; }).length / b.length };
+  }
+
+  function finish() {
+    mode = 'done';
+    var s = score(all);
+    var b3 = blocks[2], b6 = blocks[5];
+    var name1 = b3.left.map(function (c) { return c.name; }).join(' + ') + ' (sinistra) · ' + b3.right.map(function (c) { return c.name; }).join(' + ') + ' (destra)';
+    var name2 = b6.left.map(function (c) { return c.name; }).join(' + ') + ' (sinistra) · ' + b6.right.map(function (c) { return c.name; }).join(' + ') + ' (destra)';
+    var tgt1 = b3.left[0].name + ' con ' + b3.left[1].name + ' e ' + b3.right[0].name + ' con ' + b3.right[1].name;
+    var tgt2 = b6.left[0].name + ' con ' + b6.left[1].name + ' e ' + b6.right[0].name + ' con ' + b6.right[1].name;
+
+    var d = s.d, ad = Math.abs(d), strength;
+    if (ad < 0.15) strength = 'nessuna associazione rilevante'; else if (ad < 0.35) strength = 'associazione leggera';
+    else if (ad < 0.65) strength = 'associazione moderata'; else strength = 'associazione forte';
+
+    $('#dnum').textContent = (d > 0 ? '+' : d < 0 ? '−' : '') + fmt(ad, 2);
+    var txt;
+    if (ad < 0.15) txt = 'Nessuna differenza rilevante: i tempi sono simili nei due abbinamenti.';
+    else txt = 'Sei stato più rapido con l’abbinamento «' + (d > 0 ? tgt1 : tgt2) + '»: ' + strength + '.';
+    $('#dtext').textContent = txt;
+    var pos = Math.max(0, Math.min(1, (Math.max(-2, Math.min(2, d)) + 2) / 4));
+    $('#dot').style.left = (pos * 100) + '%';
+    $('#sL').textContent = '− più rapido con ' + b6.left[0].name + ' + ' + b6.left[1].name;
+    $('#sR').textContent = 'più rapido con ' + b3.left[0].name + ' + ' + b3.left[1].name + ' +';
+
+    var w = $('#warn');
+    if (s.fast > 0.10) { w.hidden = false; w.textContent = 'Più del 10% delle risposte è stato sotto i 300 ms: di solito significa che hai premuto senza leggere. Il punteggio non è affidabile, ripeti il test con più calma.'; }
+    else w.hidden = true;
+
+    var p1 = pairStats(all, [3, 4]), p2 = pairStats(all, [6, 7]);
+    $('#stats').innerHTML = '';
+    [[name1, p1], [name2, p2]].forEach(function (x) {
+      var el = document.createElement('div'); el.className = 'stat';
+      var h = document.createElement('div'); h.className = 'lead'; h.textContent = x[0];
+      var m = document.createElement('div'); m.innerHTML = 'Tempo medio <b></b> ms · errori <b></b>';
+      var bs = m.querySelectorAll('b'); bs[0].textContent = Math.round(x[1].rt); bs[1].textContent = fmt(x[1].err * 100, 1) + '%';
+      el.appendChild(h); el.appendChild(m); $('#stats').appendChild(el);
+    });
+
+    var rows = ['blocco,categoria,tipo,stimolo,lato_corretto,tempo_ms,errore'];
+    all.forEach(function (t) {
+      rows.push([t.block, '"' + t.cat.replace(/"/g, '""') + '"', t.kind === 'T' ? 'target' : 'attributo', '"' + t.stim.replace(/"/g, '""') + '"',
+        t.side === 'L' ? 'sinistra' : 'destra', Math.round(t.rt), t.err ? 1 : 0].join(','));
+    });
+    $('#csv').value = rows.join('\n');
+    $('#copyMsg').textContent = '';
+    show('result');
+  }
+
+  $('#copy').addEventListener('click', function () {
+    var ta = $('#csv'), msg = $('#copyMsg');
+    function fallback() { ta.focus(); ta.select(); msg.textContent = 'Testo selezionato: premi Ctrl+C (o Cmd+C) per copiarlo.'; }
+    try {
+      navigator.clipboard.writeText(ta.value).then(function () { msg.textContent = 'Dati copiati.'; }, fallback);
+    } catch (e) { fallback(); }
+  });
+})();
+</script>
+</body>
+</html>
