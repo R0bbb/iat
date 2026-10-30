@@ -389,7 +389,9 @@ textarea.csv { font-family: var(--font-mono); font-size: 12px; min-height: 120px
   var RUN = /[?&]test\b/.test(location.search);
   $('#again').addEventListener('click', function () { if (RUN) { startTest(); } else { mode = 'idle'; show('setup'); } });
   if (RUN) {
-    var sw = /[?&]test=b\b/.test(location.search);
+    var sw = /[?&]test=b\b/.test(location.search) ? true
+           : /[?&]test=a\b/.test(location.search) ? false
+           : Math.random() < 0.5;
     $('#swap').checked = sw;
     startTest();
   }
