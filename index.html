@@ -386,7 +386,13 @@ textarea.csv { font-family: var(--font-mono); font-size: 12px; min-height: 120px
   $('#iGo').addEventListener('click', function () { if (mode === 'instr') { mode = 'wait'; startBlock(); } });
   $('#go').addEventListener('click', startTest);
   $('#reset').addEventListener('click', fill);
-  $('#again').addEventListener('click', function () { mode = 'idle'; show('setup'); });
+  var RUN = /[?&]test\b/.test(location.search);
+  $('#again').addEventListener('click', function () { if (RUN) { startTest(); } else { mode = 'idle'; show('setup'); } });
+  if (RUN) {
+    var sw = /[?&]test=b\b/.test(location.search);
+    $('#swap').checked = sw;
+    startTest();
+  }
 
   /* --- punteggio D (Greenwald, Nosek, Banaji 2003) --- */
   function mean(a) { return a.reduce(function (s, x) { return s + x; }, 0) / a.length; }
